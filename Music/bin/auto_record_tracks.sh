@@ -15,6 +15,7 @@ sanitize_soft() {
 }
 
 PID_REC=""
+CURRENT_META=""
 CURRENT_TITLE=""
 CURRENT_ARTIST=""
 CURRENT_ALBUM=""
@@ -89,13 +90,14 @@ while true; do
 
   [[ -z "$TITLE" ]] && sleep 1 && continue
 
-  if [[ "$TITLE" != "$CURRENT_TITLE" ]]; then
-    if [[ -n "$CURRENT_TITLE" ]]; then
+  if [[ "$META" != "$CURRENT_META" ]]; then
+    if [[ -n "$CURRENT_META" ]]; then
       kill "$PID_REC" 2>/dev/null
       wait "$PID_REC" 2>/dev/null
       process_track "$TMPRAW" "$TMPMETA" &
     fi
 
+    CURRENT_META="$META"
     CURRENT_TITLE="$TITLE"
     CURRENT_ARTIST="$ARTIST"
     CURRENT_ALBUM="$ALBUM"
