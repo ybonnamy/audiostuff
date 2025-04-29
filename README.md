@@ -7,3 +7,5 @@ This project aims at playing music on linux, mixing from different sources, to d
 - Music/bin/auto_record_tracks.sh : allows to record tracks played on phones/browsers/webradios benefiting the available metadatas from playerctl  
   
 wpctl set-default \<SinkA> has been executed so that any new audio source does not disturb any current audio broadcast or recording
+
+![Screenshot of the result.](/target.png)
