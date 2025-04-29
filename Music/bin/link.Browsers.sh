@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# obsoleted by .config/pipewire/pipewire-pulse.conf.d/*
+# https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/785
+
 # wait for Chromium or Firefox streams
 while true; do
     chromium_output=$(pw-dump | jq -r '.[] | select(.info.props."application.name" == "Chromium") | .id' | head -n 1)
