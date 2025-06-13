@@ -23,6 +23,7 @@ TMPRAW=""
 TMPMETA=""
 PLAYER=""
 INTERRUPTED=false
+SLEEPDURATION=".01"
 
 SOURCE=$(pactl list short sources | grep monitor | fzf --prompt="🎚 Choose a source: " | awk '{print $2}')
 [[ -z "$SOURCE" ]] && echo "❌ No source selected." && exit 1
@@ -33,32 +34,32 @@ PLAYER=$(playerctl -l | fzf --prompt="🎛 Choose a player: ")
 echo "[🎛] Player selected: $PLAYER"
 
 process_track() {
-  local RAW="$1"
-  local META="$2"
+  RAW="$1"
+  LOCALMETA="$2"
 
-  [[ ! -f "$RAW" || ! -f "$META" ]] && echo "[⚠️] Missing raw or metadata file." && return
+  [[ ! -f "$RAW" || ! -f "$LOCALMETA" ]] && echo "[⚠️] Missing raw or metadata file." && return
 
-  local DATE=$(basename "$RAW" .raw | cut -d'_' -f2)
-  local WAV="$OUTDIR/recording_${DATE}.wav"
+  LOCALDATE=$(basename "$RAW" .raw | cut -d'_' -f2)
+  LOCALWAV="$OUTDIR/recording_${DATE}.wav"
 
-  local TITLE=$(grep "^TITLE=" "$META" | cut -d'=' -f2-)
-  local ARTIST=$(grep "^ARTIST=" "$META" | cut -d'=' -f2-)
-  local ALBUM=$(grep "^ALBUM=" "$META" | cut -d'=' -f2-)
+  LOCALTITLE=$(grep "^TITLE=" "$LOCALMETA" | cut -d'=' -f2-)
+  LOCALARTIST=$(grep "^ARTIST=" "$LOCALMETA" | cut -d'=' -f2-)
+  LOCALALBUM=$(grep "^ALBUM=" "$LOCALMETA" | cut -d'=' -f2-)
 
-  local SAFE_TITLE=$(sanitize_soft "$TITLE")
-  local SAFE_ARTIST=$(sanitize_soft "$ARTIST")
-  local SAFE_ALBUM=$(sanitize_soft "$ALBUM")
+  SAFE_TITLE=$(sanitize_soft "$LOCALTITLE")
+  SAFE_ARTIST=$(sanitize_soft "$LOCALARTIST")
+  SAFE_ALBUM=$(sanitize_soft "$LOCALALBUM")
 
-  local MP3="$OUTDIR/${DATE}__${SAFE_ARTIST} - ${SAFE_TITLE} - ${SAFE_ALBUM}.mp3"
+  MP3="$OUTDIR/${DATE}__${SAFE_ARTIST} - ${SAFE_TITLE} - ${SAFE_ALBUM}.mp3"
 
-  sox -t raw -r 44100 -e signed -b 16 -c 2 "$RAW" "$WAV" && \
-  lame "$WAV" "$MP3" && \
+  sox -t raw -r 44100 -e signed -b 16 -c 2 "$RAW" "$LOCALWAV" && \
+  lame "$LOCALWAV" "$MP3" && \
   id3v2 -t "$TITLE" -a "$ARTIST" -A "$ALBUM" "$MP3"
 
   echo "[💾] Saved: $MP3"
   echo "$DATE | $ARTIST - $TITLE | Album: $ALBUM"  >> "$LOGFILE"
 
-  rm -f "$RAW" "$WAV" "$META"
+  rm -f "$RAW" "$LOCALWAV" "$LOCALMETA"
 }
 
 cleanup_and_exit() {
@@ -87,11 +88,17 @@ while true; do
   TITLE=$(echo "$META" | grep -oP '(?<=xesam:title\s).*' | head -n 1)
   ARTIST=$(echo "$META" | grep -oP '(?<=xesam:artist\s).*' | head -n 1)
   ALBUM=$(echo "$META" | grep -oP '(?<=xesam:album\s).*' | head -n 1)
+  
+  if [[ "$TITLE" != "$CURRENT_TITLE" ]] ||  [[ "$ARTIST" != "$CURRENT_ARTIST" ]] ||  [[ "$ALBUM" != "$CURRENT_ALBUM" ]] ; then
+    #echo "### yBO debug META new $META ne $CURRENT_META"
 
-  [[ -z "$TITLE" ]] && sleep 1 && continue
-
-  if [[ "$META" != "$CURRENT_META" ]]; then
-    if [[ -n "$CURRENT_META" ]]; then
+    if [[ -z "$TITLE" ]] ; then
+      #echo "### yBO debug empty TITLE"
+      sleep $SLEEPDURATION
+      continue
+    fi     
+    
+    if [[ -n "$CURRENT_TITLE" ]]; then
       kill "$PID_REC" 2>/dev/null
       wait "$PID_REC" 2>/dev/null
       process_track "$TMPRAW" "$TMPMETA" &
@@ -101,7 +108,7 @@ while true; do
     CURRENT_TITLE="$TITLE"
     CURRENT_ARTIST="$ARTIST"
     CURRENT_ALBUM="$ALBUM"
-    DATE=$(date +%Y%m%d-%H%M%S)
+    DATE=$(date +%Y%m%d-%H%M%S-%N)
 
     TMPRAW="$OUTDIR/recording_${DATE}.raw"
     TMPMETA="$OUTDIR/recording_${DATE}.metadata"
@@ -115,8 +122,8 @@ while true; do
 
     parec --device="$SOURCE" --rate=44100 --channels=2 --format=s16le > "$TMPRAW" &
     PID_REC=$!
-  fi
-
-  sleep 1
+ else 
+    sleep $SLEEPDURATION
+ fi
 done
 
