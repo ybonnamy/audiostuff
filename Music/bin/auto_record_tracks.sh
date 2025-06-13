@@ -54,7 +54,7 @@ process_track() {
 
   sox -t raw -r 44100 -e signed -b 16 -c 2 "$RAW" "$LOCALWAV" && \
   lame "$LOCALWAV" "$MP3" && \
-  id3v2 -t "$LOCALTITLE" -a "$LOCALARTIST" -A "$LOCALALBUM" "$MP3"
+  id3v2 -t "$SAFE_TITLE" -a "$SAFE_ARTIST" -A "$SAFE_ALBUM" "$MP3"
 
   echo "[💾] Saved: $MP3"
   echo "$DATE | $ARTIST - $TITLE | Album: $ALBUM"  >> "$LOGFILE"
